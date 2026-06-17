@@ -30,7 +30,7 @@ pm.set_wavelength(wavelength)
 def record_data():
 	measured_currents.append(power_supply.P6V_current)
 	measured_time.append((time.time() - start_time))
-	measured_power.append((pm.power()/ 1e-6))
+	measured_power.append((pm.power()*24000))
 	csvwriter.writerow([measured_time[-1], measured_currents[-1],measured_power[-1]])
 	csvfile.flush()
 
