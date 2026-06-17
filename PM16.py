@@ -30,7 +30,7 @@ class were copied from
 https://github.com/djorlando24/pyLabDataLogger/blob/master/src/device/usbtmcDevice.py#L285.
 """
 
-import time, os
+import time, os, pyvisa
 
 class USBTMC:
     """
@@ -38,16 +38,15 @@ class USBTMC:
     visa.h
     """
     def __init__(self, device):
-        self.device = device
-        self.FILE = os.open(device, os.O_RDWR)
-
-        # TODO: Test that the file opened
+        self.rm = pyvisa.ResourceManager()
+        self.device = self.rm.open_resource(device)
+        self.device.timeout = 2000
 
     def write(self, command):
-        os.write(self.FILE, command.encode());
+        self.device.write(command)
 
     def read(self, length = 4000):
-        return os.read(self.FILE, length).decode("utf-8")
+        return self.device.write(command)
 
     def query(self, command, length = 4000):
         self.write(command)

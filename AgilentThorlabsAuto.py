@@ -19,19 +19,19 @@ time_interval = 1.0
 iterations = 10
 power_supply.P6V_voltage = 6.0
 dormant_time = 5
-wavelength = 680
+wavelength = 633
 
 measured_currents = []
 measured_time = []
 measured_power = []
 
-pm.set_Wavelength(wavelength)
+pm.set_wavelength(wavelength)
 
 def record_data():
 	measured_currents.append(power_supply.P6V_current)
-	measured_time.append(datetime.now().isoformat())
+	measured_time.append(datetime.now().time().isoformat())
 	measured_power.append((pm.power()/ 1e-6))
-	csvwriter.writerow([measured_time[-1], measured_currents[-1]])
+	csvwriter.writerow([measured_time[-1], measured_currents[-1],measured_power[-1]])
 	csvfile.flush()
 
 with open(f"current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv", "w", newline='') as csvfile:
