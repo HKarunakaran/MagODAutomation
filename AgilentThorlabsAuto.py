@@ -133,6 +133,7 @@ def perpendicular_coil_on(time_coil_on):
 	global para_coil_on
 	global perp_coil_on
 	board.write(("PERP_ON" + '\n').encode())
+	para_coil_on = False
 	perp_coil_on = True
 	time.sleep(time_coil_on)
 
@@ -148,7 +149,7 @@ def both_coils_off(time_coil_on):
 	global para_coil_on
 	global perp_coil_on
 	board.write(("OOF" + '\n').encode())
-	para_coil_on = True
+	para_coil_on = False
 	perp_coil_on = False
 	time.sleep(time_coil_on)
 
