@@ -37,6 +37,9 @@ custom_current = False
 #How many times are we doing this?
 iterations = 1
 
+#How long are you measuring for?
+measurement_time = 3600
+
 #-----------
 #Keep as is.
 #-----------
@@ -133,6 +136,7 @@ def perpendicular_coil_on(time_coil_on):
 	global para_coil_on
 	global perp_coil_on
 	board.write(("PERP_ON" + '\n').encode())
+	para_coil_on = False
 	perp_coil_on = True
 	time.sleep(time_coil_on)
 
@@ -148,7 +152,7 @@ def both_coils_off(time_coil_on):
 	global para_coil_on
 	global perp_coil_on
 	board.write(("OOF" + '\n').encode())
-	para_coil_on = True
+	para_coil_on = False
 	perp_coil_on = False
 	time.sleep(time_coil_on)
 
@@ -189,7 +193,7 @@ with open(f"raw_current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
 		if exp_type == 1:
 			current_run(current_increase_interval)
 		elif exp_type == 2:
-			time_run(0)
+			time_run(measurement_time)
 
 return_data(exp_type)
 create_graph(exp_type)
