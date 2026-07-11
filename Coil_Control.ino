@@ -7,8 +7,6 @@ const int para_led = 7;
 int status = 0; 
 
 void setup() {
-  // put your setup code here, to run once:
-  
   Serial.begin(9600);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
@@ -20,7 +18,6 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   if (Serial.available()) {
     String coil_status = Serial.readStringUntil('\n');
     coil_status.trim();
