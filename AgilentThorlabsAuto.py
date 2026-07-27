@@ -160,6 +160,14 @@ def coil_check():
 	coil_status = coil_map[(para_coil_on, perp_coil_on)]
 	return coil_status
 
+#Mirror Stuff
+
+def mirror_up():
+	board.write(("MIRROR_UP" + '\n').encode())
+
+def mirror_down():
+	board.write(("MIRROR_DOWN" + '\n').encode())
+
 def return_data(x):
 	if x == 1:
 		with open(f"current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv", "w", newline='') as csvfile:
