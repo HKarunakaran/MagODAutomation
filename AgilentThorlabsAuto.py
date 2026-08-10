@@ -2,6 +2,9 @@
 
 import time
 import csv
+
+import numpy as np
+
 import Keysight_E3631A as keysight
 import matplotlib.pyplot as graph
 import PM16
@@ -18,6 +21,7 @@ import math
 power_supply = keysight.Keysight_E3631A(port='port_name', baudrate=9600, parity=None, data=8, timeout=1, _sound=True)
 #Check VISA through visachecker.py and then change here!
 pm = PM16.PM16('port_name')
+pm2 = PM16.PM16('port2_name')
 #Check Arduino through __ and then change here!
 board = serial.Serial('port_name', 9600, timeout=1)
 
@@ -26,7 +30,7 @@ Measuring Current + Power? -> exp_type = 1
 Measuring Time + Power? -> exp_type = 2
 Measure Time, Current & Power? -> exp_type = 3
 '''
-exp_type = None
+exp_type = 2
 
 #Set your current increase interval here.
 current_increase_interval = 0.1
@@ -50,7 +54,7 @@ time_interval = 5.0
 power_supply.P6V_voltage = 6.0
 dormant_time = 5
 points = 10
-time_between_measurements = 0.5
+time_between_measurements = 0.3
 wavelength = 633
 perp_coil_on = board.readline().decode().strip
 para_coil_on = board.readline().decode().strip
@@ -58,12 +62,27 @@ para_coil_on = board.readline().decode().strip
 measured_currents = []
 measured_time = []
 measured_power = []
+measured_power2 = []
 measured_coil_status = []
 avg_power = []
 stdev_power = []
 new_coil_status = []
 new_currents = []
 new_time = []
+
+def determine_correction_factor():
+	cal1_array = np.array([])
+	cal2_array = np.array([])
+	for i in range(1000):
+		cal1_array.append(pm.power()*24000)
+		cal2_array.append(pm2.power()*24000)
+		time.sleep(0.2)
+	correction_factor = np.mean(cal1_array) / np.mean(cal2_array)
+	return correction_factor
+
+def corrected_laser_reading():
+	laser_change = measured_power2[-2] - measured_power2[-1]
+	measured_power.append((pm.power()*24000) + laser_change)
 
 coil_map = {(False, False): "OFF", (False, True): "BT", (True,False): "BII", (True, True): "Both"}
 
@@ -78,18 +97,20 @@ def current_check():
 
 def record_raw_data():
 	measured_coil_status.apppend(coil_check())
+	measured_power2.append(pm2.power()*24000)
+	#corrected_laser_reading()
+	measured_power.append(pm.power()*24000)
 	measured_currents.append(power_supply.P6V_current)
-	measured_time.append((time.time() - start_time))
-	measured_power.append((pm.power()*24000))
+	measured_time.append(time.time() - start_time)
 	csvwriter.writerow([measured_time[-1], measured_currents[-1], measured_coil_status[-1], measured_power[-1]])
 	csvfile2.flush()
 
 def record_comp_data():
 	new_coil_status.append(coil_check())
 	stdev_power.append(statistics.stdev(measured_power[-(points-1):]))
-	avg_power.append(statistics.mean(measured_power[-(points-1):]))
+	avg_power.append(statistics.fmean(measured_power[-(points-1):]))
 	new_currents.append(power_supply.P6V_current)
-	new_time.append((time.time() - start_time))
+	new_time.append(time.time() - start_time)
 
 def create_graph(exp_type):
 	if exp_type == 1:
@@ -99,11 +120,14 @@ def create_graph(exp_type):
 		graph.grid(True)
 		graph.show()
 	elif exp_type == 2:
-		graph.plot(measured_time, measured_power)
+		graph.plot(measured_time, measured_power,color='blue', label="PM1")
+		graph.plot(measured_time, measured_power2, color='red', label="PM2")
+		graph.legend()
 		graph.xlabel("Time (s)")
 		graph.ylabel("Power (mW)")
 		graph.grid(True)
 		graph.show()
+
 
 def time_run(measurement_time):
 	end_time = time.time() + measurement_time
@@ -160,14 +184,6 @@ def coil_check():
 	coil_status = coil_map[(para_coil_on, perp_coil_on)]
 	return coil_status
 
-#Mirror Stuff
-
-def mirror_up():
-	board.write(("MIRROR_UP" + '\n').encode())
-
-def mirror_down():
-	board.write(("MIRROR_DOWN" + '\n').encode())
-
 def return_data(x):
 	if x == 1:
 		with open(f"current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv", "w", newline='') as csvfile:
@@ -178,9 +194,9 @@ def return_data(x):
 	elif x == 2:
 		with open(f"current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv", "w", newline='') as csvfile:
 			csvwriter = csv.writer(csvfile)
-			csvwriter.writerow(["Time(s)", "Average Power (mW)"])
+			csvwriter.writerow(["Time(s)", " Power1 (mW)", " Power2 (mW)"])
 			for i in range(len(measured_time)):
-				csvwriter.writerow([measured_time[i], avg_power[i]])
+				csvwriter.writerow([measured_time[i], measured_power[i], measured_power2[i]])
 	elif x == 3:
 		with open(f"current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv", "w", newline='') as csvfile:
 			csvwriter = csv.writer(csvfile)
@@ -202,6 +218,8 @@ with open(f"raw_current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
 			current_run(current_increase_interval)
 		elif exp_type == 2:
 			time_run(measurement_time)
+		else:
+			continue
 
 return_data(exp_type)
 create_graph(exp_type)
