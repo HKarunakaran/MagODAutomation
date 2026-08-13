@@ -69,6 +69,7 @@ stdev_power = []
 new_coil_status = []
 new_currents = []
 new_time = []
+measured_power2[0] = pm2.power()*24000
 
 def determine_correction_factor():
 	cal1_array = np.array([])
@@ -81,8 +82,8 @@ def determine_correction_factor():
 	return correction_factor
 
 def corrected_laser_reading():
-	laser_change = measured_power2[-2] - measured_power2[-1]
-	measured_power.append((pm.power()*24000) + laser_change)
+	laser_change = 2.7003*(measured_power2[0] - measured_power2[-1])
+	measured_power.append((pm.power() * 24000) + laser_change)
 
 coil_map = {(False, False): "OFF", (False, True): "BT", (True,False): "BII", (True, True): "Both"}
 
@@ -98,8 +99,8 @@ def current_check():
 def record_raw_data():
 	measured_coil_status.apppend(coil_check())
 	measured_power2.append(pm2.power()*24000)
-	#corrected_laser_reading()
-	measured_power.append(pm.power()*24000)
+	corrected_laser_reading()
+	#measured_power.append(pm.power()*24000)
 	measured_currents.append(power_supply.P6V_current)
 	measured_time.append(time.time() - start_time)
 	csvwriter.writerow([measured_time[-1], measured_currents[-1], measured_coil_status[-1], measured_power[-1]])
@@ -223,3 +224,4 @@ with open(f"raw_current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
 
 return_data(exp_type)
 create_graph(exp_type)
+board.close()
