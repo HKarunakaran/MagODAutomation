@@ -22,12 +22,12 @@ import mpmath
 #------------
 
 #Check Port Name through Terminal then change here!
-power_supply = keysight.Keysight_E3631A(port='COM1', baudrate=9600, parity=None, data=8, timeout=1, _sound=True)
+power_supply = keysight.Keysight_E3631A(port='port', baudrate=9600, parity=None, data=8, timeout=1, _sound=True)
 #Check VISA through visachecker.py and then change here!
-pm = PM16.PM16('USB0::0x1313::0x807B::15092508::0::INSTR')
-pm2 = PM16.PM16('USB0::0x1313::0x807B::17032439::0::INSTR')
+pm = PM16.PM16('port')
+pm2 = PM16.PM16('port')
 #Check Arduino through __ and then change here!
-board = serial.Serial('COM3', 9600, timeout=1)
+board = serial.Serial('port', 9600, timeout=1)
 
 '''
 OD + CMag + Power -> exp_type = 1
