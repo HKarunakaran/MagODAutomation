@@ -4,9 +4,7 @@ const int perp_button = 4;
 const int para_button = 5;
 const int perp_led = 6;
 const int para_led = 7;
-const int IN3 = 8;
 int status = 0; 
-int mirror_status = 0; 
 
 void setup() {
   Serial.begin(9600);
@@ -29,11 +27,7 @@ void loop() {
       para_coil_on();
     } else if (status == "OOF"){
       out_of_field();
-    } else if (status == "MIRROR_UP" && mirror_status == 1){
-      mirror_up();
-    } else if (status == "MIRROR_DOWN" && mirror_status == 0){
-      mirror_down();
-    }
+    } 
   }
   if(digitalRead(perp_button) == HIGH && status != 2){
     delay(30);
@@ -63,14 +57,14 @@ void loop() {
 }
 
 void para_coil_on(){
-  digitalWrite(IN1, HIGH);
+  digitalWrite(IN1, LOW);
   digitalWrite(IN2, HIGH);
   digitalWrite(para_led, HIGH);
   digitalWrite(perp_led, LOW);
   status = 1;
 }
 void perp_coil_on(){
-  digitalWrite(IN1, HIGH);
+  digitalWrite(IN1, LOW);
   digitalWrite(IN2, LOW);
   digitalWrite(perp_led, HIGH);
   digitalWrite(para_led, LOW);
@@ -78,7 +72,7 @@ void perp_coil_on(){
 }
 
 void out_of_field(){
-  digitalWrite(IN1, LOW);
+  digitalWrite(IN1, HIGH);
   digitalWrite(perp_led, LOW);
   digitalWrite(para_led, LOW);
   status = 0;
@@ -88,14 +82,4 @@ void debounce(int x){
    while(digitalRead(x) == HIGH){
     }
     delay(30);
-}
-
-void mirror_up(){
-  digitalWrite(IN3, LOW);
-  mirror_status = 0; 
-}
-
-void mirror_down(){
-  digitalWrite(IN3, HIGH);
-  mirror_status = 1;
 }
