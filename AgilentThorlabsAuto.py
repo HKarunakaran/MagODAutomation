@@ -17,12 +17,12 @@ from decimal import Decimal, getcontext
 #------------
 
 #Check Port Name through Terminal then change here!
-power_supply = keysight.Keysight_E3631A(port='port', baudrate=9600, parity=None, data=8, timeout=1, _sound=True)
+power_supply = keysight.Keysight_E3631A(port='-', baudrate=9600, parity=None, data=8, timeout=1, _sound=True)
 #Check VISA through visachecker.py and then change here!
-pm = PM16.PM16('port')
-pm2 = PM16.PM16('port')
-#Check Arduino through __ and then change here!
-board = serial.Serial('port', 9600, timeout=1)
+pm = PM16.PM16('-')
+pm2 = PM16.PM16('-')
+#Check Arduino through Terminal and then change here!
+board = serial.Serial('-', 9600, timeout=1)
 
 '''
 OD + CMag + Power -> exp_type = 1
