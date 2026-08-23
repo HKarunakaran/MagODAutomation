@@ -37,7 +37,7 @@ current_increase_interval = 0.5
 custom_current = False
 
 #How many times are we doing this?
-sample_numbers = 4
+sample_numbers = 1
 
 #How long are you measuring for?
 measurement_time = 3600
@@ -154,7 +154,7 @@ def record_raw_data():
     measured_power2.append(pm2.power() * pm2_factor)
     measured_power.append((pm.power() * pm_factor))
     measured_currents.append(power_supply.P6V_current)
-    measured_time.append((time.perf_counter_ns() - start_time)/1e9)
+    measured_time.append((time.perf_counter() - start_time))
     csvwriter.writerow([measured_time[-1], measured_currents[-1], measured_coil_status[-1], measured_power[-1], measured_power2[-1]])
     csvfile2.flush()
 
@@ -165,19 +165,25 @@ def record_comp_data():
     avg_power.append(statistics.fmean(measured_power[-(points-1):]))
     avg_power2.append(statistics.fmean(measured_power2[-(points-1):]))
     new_currents.append(power_supply.P6V_current)
-    new_time.append((time.perf_counter_ns() - start_time)/1e9)
+    new_time.append((time.perf_counter() - start_time))
 
-def record_od():
+def record_od(exp_type):
     getcontext().prec = 30
     csvwriter.writerow(" ")
     csvwriter.writerow(["OD"])
-    for i in range(len(avg_power)):
-        if blank_req:
-            od.append(Decimal(str((avg_power2[i]*correction_factor)/avg_power[i])).log10())
-        else:
-            od.append(Decimal(str((avg_power2[i]*correction_factor)/avg_power[i])).log10()-Decimal(str(blankodavg)))
-        csvwriter.writerow([od[-1]])
-        csvfile2.flush()
+    if exp_type == 1:
+        for i in range(len(avg_power)):
+            if blank_req:
+                od.append(Decimal(str((avg_power2[i]*correction_factor)/avg_power[i])).log10())
+            else:
+                od.append(Decimal(str((avg_power2[i]*correction_factor)/avg_power[i])).log10()-Decimal(str(blankodavg)))
+            csvwriter.writerow([od[-1]])
+            csvfile2.flush()
+    elif exp_type == 2:
+        for i in range(len(measured_power)):
+            od.append(Decimal(str((measured_power2[i]*correction_factor)/measured_power[i])).log10())
+            csvwriter.writerow([od[-1]])
+            csvfile2.flush()
 
 def determine_cmag():
     for o, i in enumerate(new_coil_status):
@@ -206,20 +212,17 @@ def create_graph(exp_type):
         else:
             samplenum += 1
     elif exp_type == 2:
-        graph.plot(measured_time, measured_power,color='blue', label="PM1")
-        graph.plot(measured_time, measured_power2, color='red', label="PM2")
-        graph.legend()
-        graph.xlabel("Time (s)")
-        graph.ylabel("Power (mW)")
-        graph.grid(True)
-        graph.show()
+        whole, grphs = graph.subplots(2)
+        whole.suptitle("Sample # " + ("Blank" if samplenum == 0 else str(samplenum)))
+        grphs[0].plot(measured_time, [float(x) for x in od], marker="o")
+        grphs[0].set_title("OD vs Time")
+        grphs[1].plot(measured_time, measured_power, marker="o")
+        grphs[1].plot(measured_time, measured_power2, marker="o")
+        grphs[1].set_title("Power Meters vs Current")
 
 def time_run(measurement_time):
-    measured_power2.append(pm2.power() * pm2_factor)
-    measured_power.append(pm.power() * pm_factor)
-    measured_time.append(0)
-    end_time = time.time() + measurement_time
-    while time.time() < end_time:
+    end_time = time.perf_counter() + measurement_time
+    while time.perf_counter() < end_time:
         record_raw_data()
         time.sleep(time_between_measurements)
 
@@ -287,9 +290,9 @@ def return_data(x):
     elif x == 2:
         with open(f"current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv", "w", newline='') as csvfile:
             csvwriter = csv.writer(csvfile)
-            csvwriter.writerow(["Time(s)", " Power1 (mW)", " Power2 (mW)"])
+            csvwriter.writerow(["Time(s)", "OD", "Power1 (mW)", " Power2 (mW)"])
             for i in range(len(measured_time)):
-                csvwriter.writerow([measured_time[i], measured_power[i], measured_power2[i]])
+                csvwriter.writerow([measured_time[i], od[i], measured_power[i], measured_power2[i]])
     else:
         raise ValueError("Please select a valid integer for experiment type.")
 try:
@@ -297,12 +300,12 @@ try:
         current = 0.0
         with open(f"raw_current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv", "w", newline='') as csvfile2:
             csvwriter = csv.writer(csvfile2)
-            csvwriter.writerow(["Time (s)", "Current (A)", "Power (mW)"])
-            start_time = time.perf_counter_ns()
+            csvwriter.writerow(["Time (s)", "Current (A)", "Coil Status", "Power 1 (mW)", " Power 2 (mW)"])
+            start_time = time.perf_counter()
             both_coils_off(0)
             if exp_type == 1:
                 current_run(current_increase_interval)
-                record_od()
+                record_od(1)
                 if blank_req:
                     blankodavg = statistics.fmean(od)
                     blank_req = False
@@ -316,9 +319,11 @@ try:
                     graph.show()
             elif exp_type == 2:
                 time_run(measurement_time)
+                record_od(2)
                 return_data(exp_type)
+                samplenum = sample_numbers
                 create_graph(exp_type)
+                graph.show()
                 clear_arrays()
-                sample_check()
 finally:
     board.close()
