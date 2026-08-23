@@ -37,16 +37,16 @@ class USBTMC:
     Simple implememntation of a USBTMC device driver, in the style of
     visa.h
     """
-    def __init__(self, device):
+    def __init__(self, device_address):
         self.rm = pyvisa.ResourceManager()
-        self.device = self.rm.open_resource(device)
-        self.device.timeout = 2000
-
+        self.device = self.rm.open_resource(device_address)
+        self.device.timeout = 2000 
+        
     def write(self, command):
         self.device.write(command)
-
-    def read(self, length = 4000):
-        return self.device.write(command)
+        
+    def read(self, length=4000):
+        return self.device.read()
 
     def query(self, command, length = 4000):
         self.write(command)
