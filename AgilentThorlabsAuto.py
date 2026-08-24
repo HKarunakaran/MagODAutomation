@@ -21,14 +21,15 @@ power_supply = keysight.Keysight_E3631A(port='-', baudrate=9600, parity=None, da
 #Check VISA through visachecker.py and then change here!
 pm = PM16.PM16('-')
 pm2 = PM16.PM16('-')
-#Check Arduino through Terminal and then change here!
+#Check Arduino through __ and then change here!
 board = serial.Serial('-', 9600, timeout=1)
 
 '''
 OD + CMag + Power -> exp_type = 1
-Measuring Time + Power? -> exp_type = 2
+Measuring OD or Power over time? -> exp_type = 2
+Simple OD Measurement? -> exp_type = 3
 '''
-exp_type = 1
+exp_type = 4
 
 #Set your current increase interval here.
 current_increase_interval = 0.5
@@ -40,7 +41,7 @@ custom_current = False
 sample_numbers = 1
 
 #How long are you measuring for?
-measurement_time = 3600
+measurement_time = 10
 
 blank_req = True
 
@@ -84,7 +85,7 @@ cal3_array = []
 od = []
 cmag = []
 blank_od = []
-for i in range(100):
+for i in range(200):
     blank_od.append(0)
 
 def clear_arrays():
@@ -173,6 +174,7 @@ def record_od(exp_type):
     csvwriter.writerow(["OD"])
     if exp_type == 1:
         for i in range(len(avg_power)):
+            getcontext().prec = 40
             if blank_req:
                 od.append(Decimal(str((avg_power2[i]*correction_factor)/avg_power[i])).log10())
             else:
@@ -181,7 +183,14 @@ def record_od(exp_type):
             csvfile2.flush()
     elif exp_type == 2:
         for i in range(len(measured_power)):
-            od.append(Decimal(str((measured_power2[i]*correction_factor)/measured_power[i])).log10())
+            getcontext().prec = 40
+            od_calc = ((Decimal(str(measured_power2[i]))*Decimal(str(correction_factor)))/Decimal(str(measured_power[i]))).log10()
+            od.append(od_calc)
+    elif exp_type == 3:
+        for i in range(len(avg_power)):
+            getcontext().prec = 40
+            od_calc = ((Decimal(str(avg_power2[i]))*Decimal(str(correction_factor)))/Decimal(str(avg_power[i]))).log10()
+            od.append(od_calc)
             csvwriter.writerow([od[-1]])
             csvfile2.flush()
 
@@ -219,6 +228,8 @@ def create_graph(exp_type):
         grphs[1].plot(measured_time, measured_power, marker="o")
         grphs[1].plot(measured_time, measured_power2, marker="o")
         grphs[1].set_title("Power Meters vs Current")
+    elif exp_type == 3:
+        print("Avg Power: ", avg_power[0], "Std. Dev Power: ", stdev_power[0], "OD: ", od[0])
 
 def time_run(measurement_time):
     end_time = time.perf_counter() + measurement_time
@@ -243,6 +254,10 @@ def current_run(x):
         if custom_current == True:
             current_check()
         current += x
+
+def simple_od():
+    record_data()
+    record_od(3)
 
 def record_data():
     for q in range(points):
@@ -293,6 +308,12 @@ def return_data(x):
             csvwriter.writerow(["Time(s)", "OD", "Power1 (mW)", " Power2 (mW)"])
             for i in range(len(measured_time)):
                 csvwriter.writerow([measured_time[i], od[i], measured_power[i], measured_power2[i]])
+    elif x == 3:
+        with open(f"current_data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv", "w", newline='') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerow(["Time(s)", "Power1 (mW)", " Power2 (mW)"])
+            for i in range(len(measured_time)):
+                csvwriter.writerow([measured_time[i], measured_power[i], measured_power2[i]])
     else:
         raise ValueError("Please select a valid integer for experiment type.")
 try:
@@ -324,6 +345,10 @@ try:
                 samplenum = sample_numbers
                 create_graph(exp_type)
                 graph.show()
+                clear_arrays()
+            elif exp_type == 3:
+                simple_od()
+                return_data(exp_type)
                 clear_arrays()
 finally:
     board.close()
