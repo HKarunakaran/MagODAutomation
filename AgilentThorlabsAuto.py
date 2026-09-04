@@ -11,51 +11,52 @@ import statistics
 from datetime import datetime
 import serial
 from decimal import Decimal, getcontext
+from ctypes import *
 
 #------------
 #Change these!
 #------------
 
 #Check Port Name through Terminal then change here!
-power_supply = keysight.Keysight_E3631A(port='-', baudrate=9600, parity=None, data=8, timeout=1, _sound=True)
+power_supply = keysight.Keysight_E3631A(port='', baudrate=9600, parity=None, data=8, timeout=1, _sound=True)
 #Check VISA through visachecker.py and then change here!
-pm = PM16.PM16('-')
-pm2 = PM16.PM16('-')
+pm = PM16.PM16('')
+#pm2 = PM16.PM16('USB0::0x1313::0x807B::17032439::0::INSTR')
+pm2= PM16.PM16('')
 #Check Arduino through __ and then change here!
-board = serial.Serial('-', 9600, timeout=1)
+board = serial.Serial('', 9600, timeout=1)
 
 '''
 OD + CMag + Power -> exp_type = 1
 Measuring OD or Power over time? -> exp_type = 2
 Simple OD Measurement? -> exp_type = 3
 '''
-exp_type = 4
+exp_type = 1
 
 #Set your current increase interval here.
-current_increase_interval = 0.5
+current_increase_interval = 1.0
 
 #Is it a conditional current increase?
-custom_current = False
+custom_current = True
 
 #How many times are we doing this?
 sample_numbers = 1
 
 #How long are you measuring for?
-measurement_time = 10
+measurement_time = 100
 
 blank_req = True
 
 #-----------
 #Keep as is.
 #-----------
-
 current = 0.0
 max_current = 4.01
 time_interval = 5.0
 power_supply.P6V_voltage = 6.0
 dormant_time = 5
 points = 10
-time_between_measurements = 0.3
+time_between_measurements = 0.5
 wavelength = 633
 pm_factor = 1000
 pm2_factor = 1000
@@ -84,6 +85,9 @@ cal2_array = []
 cal3_array = []
 od = []
 cmag = []
+temperature_array = []
+humidity_array = []
+internal_temp_array = []
 blank_od = []
 for i in range(200):
     blank_od.append(0)
@@ -146,9 +150,11 @@ coil_map = {(False, False): "OFF", (False, True): "BT", (True,False): "BII", (Tr
 def current_check():
     global current_increase_interval
     if power_supply.P6V_current < 1:
-        current_increase_interval = 0.05
+        current_increase_interval = 0.1
+    elif power_supply.P6V_current > 1 and power_supply.P6V_current < 2:
+        current_increase_interval = 0.25
     else:
-        current_increase_interval = 0.2
+        current_increase_interval = 0.5
 
 def record_raw_data():
     measured_coil_status.append(coil_check())
@@ -223,10 +229,10 @@ def create_graph(exp_type):
     elif exp_type == 2:
         whole, grphs = graph.subplots(2)
         whole.suptitle("Sample # " + ("Blank" if samplenum == 0 else str(samplenum)))
-        grphs[0].plot(measured_time, [float(x) for x in od], marker="o")
+        grphs[0].plot(measured_time, [float(x) for x in od])
         grphs[0].set_title("OD vs Time")
-        grphs[1].plot(measured_time, measured_power, marker="o")
-        grphs[1].plot(measured_time, measured_power2, marker="o")
+        grphs[1].plot(measured_time, measured_power)
+        grphs[1].plot(measured_time, measured_power2)
         grphs[1].set_title("Power Meters vs Current")
     elif exp_type == 3:
         print("Avg Power: ", avg_power[0], "Std. Dev Power: ", stdev_power[0], "OD: ", od[0])
@@ -244,16 +250,17 @@ def current_run(x):
     measured_time.append(0)
     while current <= max_current:
         power_supply.P6V_current = current
+        both_coils_off(5)
         time.sleep(time_interval)
-        both_coils_off(3)
         record_data()
-        parallel_coil_on(3)
+        parallel_coil_on(5)
         record_data()
-        perpendicular_coil_on(3)
+        perpendicular_coil_on(5)
         record_data()
-        if custom_current == True:
+        if samplenum == 1 and custom_current == True:
             current_check()
-        current += x
+        current += current_increase_interval
+        
 
 def simple_od():
     record_data()
